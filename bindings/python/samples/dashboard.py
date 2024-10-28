@@ -29,6 +29,12 @@ class LEDMatrixDashboard:
   def draw_text(self, font_height, pos_x, pos_y, text, text_color = graphics.Color(0, 255, 255)):
     font_files = {
       7: "../../../fonts/5x7.bdf",
+      8: "../../../fonts/5x8.bdf",
+      9: "../../../fonts/6x9.bdf",
+      10: "../../../fonts/6x10.bdf",
+      12: "../../../fonts/6x12.bdf",
+      14: "../../../fonts/7x14.bdf",
+      18: "../../../fonts/9x18.bdf",
       20: "../../../fonts/10x20.bdf",
       24: "../../../fonts/12x24.bdf"
     }
