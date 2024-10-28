@@ -1,10 +1,12 @@
 from rgbmatrix import RGBMatrix, RGBMatrixOptions, graphics
+import sys
 import time
 import requests
+import os
 from PIL import Image
 
 class LEDMatrixDashboard:
-  def __init__(self):
+  def __init__(self, location = "Santa Barbara"):
     options = RGBMatrixOptions()
     options.rows = 64
     options.cols = 64
@@ -13,12 +15,19 @@ class LEDMatrixDashboard:
     options.hardware_mapping = 'regular'
 
     self.matrix = RGBMatrix(options=options)
-    self.weather = self.get_weather('Chicago')
+    self.location = location
+    self.weather = self.get_weather()
     self.default_color = graphics.Color(0, 255, 255)
     self.offscreen_canvas = self.matrix.CreateFrameCanvas()
 
   def run(self):
+    print(self.location)
+    start_time = time.time()
     while True:
+      elapsed_time = time.time() - start_time
+      if elapsed_time > 30:
+        self.matrix.Clear()
+        break
       self.offscreen_canvas.Clear()
       self.display_weather()
 
@@ -27,7 +36,8 @@ class LEDMatrixDashboard:
 
   # draws belo pos_x instead of above which is default behavior for graphics.drawText()
   def draw_text(self, font_height, pos_x, pos_y, text, text_color = graphics.Color(0, 255, 255)):
-    font_files = {
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))
+    fonts = {
       7: "../../../fonts/5x7.bdf",
       8: "../../../fonts/5x8.bdf",
       9: "../../../fonts/6x9.bdf",
@@ -35,20 +45,18 @@ class LEDMatrixDashboard:
       12: "../../../fonts/6x12.bdf",
       14: "../../../fonts/7x14.bdf",
       18: "../../../fonts/9x18.bdf",
-      20: "../../../fonts/10x20.bdf",
-      24: "../../../fonts/12x24.bdf"
     }
-
-    if font_height not in font_files:
+    if font_height not in fonts:  
       raise ValueError(f"Invalid font height: {font_height}")
-
+    
     font = graphics.Font()
-    font.LoadFont(font_files[font_height])
+    font.LoadFont(fonts[font_height])
+
     graphics.DrawText(self.offscreen_canvas, font, pos_x, pos_y + font_height, text_color, text)
   
-  def get_weather(self, location = 'Santa Barbara'):
+  def get_weather(self):
       api_key = '623331e648e44cbd97970459242710'
-      url = f'http://api.weatherapi.com/v1/current.json?key={api_key}&q={location}'
+      url = f'http://api.weatherapi.com/v1/current.json?key={api_key}&q={self.location}'
       response = requests.get(url)
       if response.status_code == 200:
           weather_data = response.json()
@@ -56,7 +64,8 @@ class LEDMatrixDashboard:
       else:
           return 'Error fetching weather'
       
-  def display_weather(self):  
+  def display_weather(self):
+    self.offscreen_canvas.Clear()  
     location = self.weather['location']['name']
     self.draw_text(7, 5, 10, location)
     weather_message = f"{self.weather['current']['temp_c']} C"
@@ -95,5 +104,6 @@ class LEDMatrixDashboard:
       self.offscreen_canvas = self.matrix.SwapOnVSync(self.offscreen_canvas)
 
 if __name__ == "__main__":
-  dashboard = LEDMatrixDashboard()
+  location = sys.argv[1] if len(sys.argv) > 1 else "Chicago"
+  dashboard = LEDMatrixDashboard(location)
   dashboard.run()
