@@ -30,7 +30,7 @@ class LEDMatrixDashboard:
             self.offscreen_canvas = self.matrix.SwapOnVSync(self.offscreen_canvas)
 
     # draws belo pos_x instead of above which is default behavior for graphics.drawText()
-    def draw_text(self, font_height, pos_x, pos_y, text, text_color = graphics.Color(0, 255, 255)):
+    def draw_text(self, font_height, pos_x, pos_y, text, text_color = self.default_color):
         os.chdir(os.path.dirname(os.path.abspath(__file__)))
         fonts = {
             7: "../../../fonts/5x7.bdf",
@@ -86,16 +86,22 @@ class LEDMatrixDashboard:
                 graphics.Color(r, g, b)
                 self.offscreen_canvas.SetPixel(pos_x + x, pos_y + y, r, g, b)
 
-    def display_loading(self, duration = 3):
-        frames = ['|', '/', '-', '\\']
+    def display_loading(self, duration=3):
         start_time = time.time()
-        frame_index = 0
+        max_size = min(self.matrix.width, self.matrix.height) // 2
 
         while time.time() - start_time < duration:
+            elapsed_time = time.time() - start_time
+            size = int((elapsed_time / duration) * max_size)
+
             self.offscreen_canvas.Clear()
-            self.draw_text(10, 30, 30, frames[frame_index], self.default_color)
+            for i in range(size):
+                self.draw_text(10, 30 - i, 30 - i, '|')
+                self.draw_text(10, 30 + i, 30 - i, '|')
+                self.draw_text(10, 30 - i, 30 + i, '|')
+                self.draw_text(10, 30 + i, 30 + i, '|')
+
             self.offscreen_canvas = self.matrix.SwapOnVSync(self.offscreen_canvas)
-            frame_index = (frame_index + 1) % len(frames)
             time.sleep(0.1)
 
     # untested
