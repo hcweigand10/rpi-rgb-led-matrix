@@ -3,6 +3,7 @@ import sys
 import time
 import requests
 import os
+import math
 from PIL import Image
 
 class LEDMatrixDashboard:
@@ -17,7 +18,6 @@ class LEDMatrixDashboard:
         self.matrix = RGBMatrix(options=options)
         self.location = location
         self.weather = self.get_weather()
-        self.default_color = graphics.Color(0, 255, 255)
         self.offscreen_canvas = self.matrix.CreateFrameCanvas()
 
     def run(self):
@@ -30,7 +30,7 @@ class LEDMatrixDashboard:
             self.offscreen_canvas = self.matrix.SwapOnVSync(self.offscreen_canvas)
 
     # draws belo pos_x instead of above which is default behavior for graphics.drawText()
-    def draw_text(self, font_height, pos_x, pos_y, text, text_color = self.default_color):
+    def draw_text(self, font_height, pos_x, pos_y, text, text_color = graphics.Color(0, 255, 255)):
         os.chdir(os.path.dirname(os.path.abspath(__file__)))
         fonts = {
             7: "../../../fonts/5x7.bdf",
@@ -90,16 +90,30 @@ class LEDMatrixDashboard:
         start_time = time.time()
         max_size = min(self.matrix.width, self.matrix.height) // 2
 
+        def ease_in_out(t):
+            return t * t * (3 - 2 * t)
+
+        def interpolate_color(start_color, end_color, factor):
+            return tuple(int(start + (end - start) * factor) for start, end in zip(start_color, end_color))
+
         while time.time() - start_time < duration:
             elapsed_time = time.time() - start_time
-            size = int((elapsed_time / duration) * max_size)
+            progress = elapsed_time / duration
+
+            if progress < 0.5:
+                size = int(ease_in_out(progress * 2) * max_size)
+            else:
+                size = int(ease_in_out((1 - progress) * 2) * max_size)
+
+            color_factor = size / max_size
+            color = interpolate_color((255, 255, 0), (255, 0, 0), color_factor)
 
             self.offscreen_canvas.Clear()
             for i in range(size):
-                self.draw_text(10, 30 - i, 30 - i, '|')
-                self.draw_text(10, 30 + i, 30 - i, '|')
-                self.draw_text(10, 30 - i, 30 + i, '|')
-                self.draw_text(10, 30 + i, 30 + i, '|')
+                self.draw_text(10, 30 - i, 30 - i, '|', graphics.Color(*color))
+                self.draw_text(10, 30 + i, 30 - i, '|', graphics.Color(*color))
+                self.draw_text(10, 30 - i, 30 + i, '|', graphics.Color(*color))
+                self.draw_text(10, 30 + i, 30 + i, '|', graphics.Color(*color))
 
             self.offscreen_canvas = self.matrix.SwapOnVSync(self.offscreen_canvas)
             time.sleep(0.1)
