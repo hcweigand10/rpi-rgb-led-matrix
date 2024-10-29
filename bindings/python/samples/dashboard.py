@@ -21,7 +21,7 @@ class LEDMatrixDashboard:
         self.offscreen_canvas = self.matrix.CreateFrameCanvas()
 
     def run(self):
-        self.display_loading2()
+        self.display_loading()
         while True:
             self.offscreen_canvas.Clear()
             self.display_weather()
@@ -87,38 +87,6 @@ class LEDMatrixDashboard:
                 self.offscreen_canvas.SetPixel(pos_x + x, pos_y + y, r, g, b)
 
     def display_loading(self, duration=3):
-        start_time = time.time()
-        max_size = min(self.matrix.width, self.matrix.height) // 2
-
-        def ease_in_out(t):
-            return t * t * (3 - 2 * t)
-
-        def interpolate_color(start_color, end_color, factor):
-            return tuple(int(start + (end - start) * factor) for start, end in zip(start_color, end_color))
-
-        while time.time() - start_time < duration:
-            elapsed_time = time.time() - start_time
-            progress = elapsed_time / duration
-
-            if progress < 0.5:
-                size = int(ease_in_out(progress * 2) * max_size)
-            else:
-                size = int(ease_in_out((1 - progress) * 2) * max_size)
-
-            color_factor = size / max_size
-            color = interpolate_color((255, 255, 0), (255, 0, 0), color_factor)
-
-            self.offscreen_canvas.Clear()
-            for i in range(size):
-                self.draw_text(10, 30 - i, 30 - i, '|', graphics.Color(*color))
-                self.draw_text(10, 30 + i, 30 - i, '|', graphics.Color(*color))
-                self.draw_text(10, 30 - i, 30 + i, '|', graphics.Color(*color))
-                self.draw_text(10, 30 + i, 30 + i, '|', graphics.Color(*color))
-
-            self.offscreen_canvas = self.matrix.SwapOnVSync(self.offscreen_canvas)
-            time.sleep(0.1)
-
-    def display_loading2(self, duration=3):
         center = (self.matrix.width // 2, self.matrix.height // 2)
         radius = 0
         max_radius = min(self.matrix.width, self.matrix.height) // 2
@@ -126,14 +94,32 @@ class LEDMatrixDashboard:
 
         while time.time() - start_time < duration:
             elapsed_time = time.time() - start_time
-            progress = elapsed_time / duration
-            radius = int(progress * max_radius)
-            color = graphics.Color(255, 0, 0)
+            progress = get_fill_percentage(elapsed_time, duration)
+            curr_radius = int(progress * max_radius)
+            for i in range(0, curr_radius):
+                radius = i
+                color = graphics.Color((255 * progress), 0, 0)
+                graphics.DrawCircle(self.offscreen_canvas, center[0], center[1], radius, color)
 
             self.offscreen_canvas.Clear()
-            graphics.DrawCircle(self.offscreen_canvas, center[0], center[1], radius, color)
             self.offscreen_canvas = self.matrix.SwapOnVSync(self.offscreen_canvas)
             time.sleep(0.05)
+
+    def smooth_ease(start, end, t):
+        """Cosine easing function from start to end over t ∈ [0, 1]."""
+        factor = (1 - math.cos(math.pi * t)) / 2
+        return start + (end - start) * factor
+
+    def get_fill_percentage(elapsed_time, total_duration=3):
+        # Ensure elapsed_time is within [0, 3] range by using modulo
+        t = elapsed_time % total_duration
+
+        if t <= 1:  # Phase 1: 0 - 1 second, ease 0% -> 50%
+            return smooth_ease(0, 50, t)
+        elif t <= 2:  # Phase 2: 1 - 2 seconds, ease 50% -> 25%
+            return smooth_ease(50, 25, t - 1)
+        else:  # Phase 3: 2 - 3 seconds, ease 25% -> 100%
+            return smooth_ease(25, 100, t - 2)
 
     def display_gif(self, gif_path, duration=3):
         gif = Image.open(gif_path)
