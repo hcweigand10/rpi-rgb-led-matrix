@@ -4,7 +4,7 @@ import time
 import requests
 import os
 import math
-from PIL import Image
+from PIL import Image, ImageSequence
 
 class LEDMatrixDashboard:
     def __init__(self, location = "Santa Barbara"):
@@ -21,7 +21,7 @@ class LEDMatrixDashboard:
         self.offscreen_canvas = self.matrix.CreateFrameCanvas()
 
     def run(self):
-        self.display_loading()
+        self.display_loading2()
         while True:
             self.offscreen_canvas.Clear()
             self.display_weather()
@@ -117,6 +117,40 @@ class LEDMatrixDashboard:
 
             self.offscreen_canvas = self.matrix.SwapOnVSync(self.offscreen_canvas)
             time.sleep(0.1)
+
+    def display_loading2(self, duration=3):
+        center = (self.matrix.width // 2, self.matrix.height // 2)
+        radius = 0
+        max_radius = min(self.matrix.width, self.matrix.height) // 2
+        start_time = time.time()
+
+        while time.time() - start_time < duration:
+            elapsed_time = time.time() - start_time
+            progress = elapsed_time / duration
+            radius = int(progress * max_radius)
+            color = graphics.Color(255, 0, 0)
+
+            self.offscreen_canvas.Clear()
+            graphics.DrawCircle(self.offscreen_canvas, center[0], center[1], radius, color)
+            self.offscreen_canvas = self.matrix.SwapOnVSync(self.offscreen_canvas)
+            time.sleep(0.05)
+
+    def display_gif(self, gif_path, duration=3):
+        gif = Image.open(gif_path)
+        start_time = time.time()
+
+        while time.time() - start_time < duration:
+            for frame in ImageSequence.Iterator(gif):
+                frame = frame.convert('RGB')
+                frame = frame.resize((self.matrix.width, self.matrix.height))
+
+                for x in range(frame.width):
+                    for y in range(frame.height):
+                        r, g, b = frame.getpixel((x, y))
+                        self.offscreen_canvas.SetPixel(x, y, r, g, b)
+
+                self.offscreen_canvas = self.matrix.SwapOnVSync(self.offscreen_canvas)
+                time.sleep(gif.info['duration'] / 1000.0)  # Convert milliseconds to seconds
 
     # untested
     def scroll_text(self):
