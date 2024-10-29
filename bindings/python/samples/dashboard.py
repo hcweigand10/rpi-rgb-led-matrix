@@ -94,11 +94,12 @@ class LEDMatrixDashboard:
 
         while time.time() - start_time < duration:
             elapsed_time = time.time() - start_time
-            progress = self.get_fill_percentage(elapsed_time, duration)
+            progress = self.get_fill_percentage(elapsed_time, duration) / 100
             curr_radius = int(progress * max_radius)
             for i in range(0, curr_radius):
                 radius = i
-                color = graphics.Color((255 * progress), 0, 0)
+                hue = int(progress * 255)
+                color = graphics.Color(hue, 0, 0)
                 graphics.DrawCircle(self.offscreen_canvas, center[0], center[1], radius, color)
 
             self.offscreen_canvas.Clear()
